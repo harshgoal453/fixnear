@@ -1,0 +1,195 @@
+import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useCategories, useTechnicians } from '../hooks/useFixNearQuery';
+import TechCard from '../components/TechCard';
+import BookingModal from '../components/BookingModal';
+import PaymentModal from '../components/PaymentModal';
+import { Search, ShieldCheck, RotateCcw, SlidersHorizontal, Sparkles } from 'lucide-react';
+
+export default function ServiceCatalog() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || '';
+  const initialSearch = searchParams.get('search') || '';
+
+  // Filters state
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [minRating, setMinRating] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedTechForBooking, setSelectedTechForBooking] = useState(null);
+  const [immediatePaymentBooking, setImmediatePaymentBooking] = useState(null);
+
+  // TanStack Query Hooks
+  const { data: categories = [] } = useCategories();
+  const { data: technicians = [], isLoading: techsLoading } = useTechnicians({
+    search: searchTerm,
+    category: selectedCategory,
+    verified: verifiedOnly ? '1' : undefined,
+    min_rating: minRating,
+    city: selectedCity
+  });
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('');
+    setVerifiedOnly(false);
+    setMinRating('');
+    setSelectedCity('');
+    setSearchParams({});
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>India Verified Equipment Fleet</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          Find Certified Technicians Near You
+        </h1>
+        <p className="text-sm text-slate-400 max-w-2xl">
+          Compare upfront hourly rates, inspect specialized equipment & tool specs, and book licensed local professionals with FixNear guarantees.
+        </p>
+      </div>
+
+      {/* Filter Controls Bar */}
+      <div className="glass-card bg-slate-900/60 p-5 rounded-3xl border border-slate-800/80 shadow-xl space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* Search text */}
+          <div className="relative lg:col-span-2">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" />
+            <input
+              type="text"
+              placeholder="Search technician name, skill, equipment..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Category Dropdown */}
+          <div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="" className="bg-slate-900">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.slug} className="bg-slate-900">{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Min Rating Dropdown */}
+          <div>
+            <select
+              value={minRating}
+              onChange={(e) => setMinRating(e.target.value)}
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="" className="bg-slate-900">Any Rating</option>
+              <option value="4.8" className="bg-slate-900">4.8+ Stars (Top Rated)</option>
+              <option value="4.5" className="bg-slate-900">4.5+ Stars</option>
+              <option value="4.0" className="bg-slate-900">4.0+ Stars</option>
+            </select>
+          </div>
+
+          {/* City Selector */}
+          <div>
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="" className="bg-slate-900">All Cities</option>
+              <option value="Mumbai" className="bg-slate-900">Mumbai, MH</option>
+              <option value="Bengaluru" className="bg-slate-900">Bengaluru, KA</option>
+              <option value="Delhi" className="bg-slate-900">Delhi NCR, DL</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Toggles & Reset */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80 text-xs">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={verifiedOnly}
+              onChange={(e) => setVerifiedOnly(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900"
+            />
+            <span className="font-bold text-slate-300 flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              Government License & Document Verified Only
+            </span>
+          </label>
+
+          <button
+            onClick={resetFilters}
+            className="text-slate-400 hover:text-white font-bold flex items-center gap-1.5 transition"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset All Filters</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Results Grid */}
+      {techsLoading ? (
+        <div className="text-center py-16 text-slate-400 font-semibold flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <span>Searching local service professionals...</span>
+        </div>
+      ) : technicians.length === 0 ? (
+        <div className="glass-card bg-slate-900/60 rounded-3xl border border-slate-800 p-16 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+            <Search className="w-7 h-7" />
+          </div>
+          <h3 className="font-extrabold text-white text-xl">No Technicians Found</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Try adjusting your search filters or clearing city selections to see more available providers across India.
+          </p>
+          <button
+            onClick={resetFilters}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20 transition"
+          >
+            Reset Filters
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {technicians.map((tech) => (
+            <TechCard
+              key={tech.id}
+              tech={tech}
+              onBookClick={(t) => setSelectedTechForBooking(t)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {selectedTechForBooking && (
+        <BookingModal
+          tech={selectedTechForBooking}
+          onClose={() => setSelectedTechForBooking(null)}
+          onBookingSuccess={(createdBooking) => {
+            // Handled inside BookingModal with direct pay / track action
+          }}
+        />
+      )}
+
+      {/* Direct Payment Modal (if launched directly) */}
+      {immediatePaymentBooking && (
+        <PaymentModal
+          booking={immediatePaymentBooking}
+          onClose={() => setImmediatePaymentBooking(null)}
+        />
+      )}
+    </div>
+  );
+}
