@@ -1,0 +1,14 @@
+{
+  "name": "fixnear",
+  "version": "1.0.0",
+  "description": "FixNear India - Full-Stack Local Service Marketplace Platform",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "start:backend": "npm --prefix backend start",
+    "start:frontend": "npm --prefix frontend run dev",
+    "seed": "npm --prefix backend run seed",
+    "build": "npm --prefix frontend run build"
+  },
+  "author": "Harsh",
+  "license": "ISC"
+}
