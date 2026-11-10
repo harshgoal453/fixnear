@@ -332,6 +332,45 @@ export default function Login() {
               <span>{submitting ? 'Authenticating...' : 'Sign In to Account'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+
+            {/* Quick Fill for Evaluator / Teacher */}
+            <div className="pt-2 border-t border-slate-100">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                Teacher / Evaluator Demo Credentials (Click to fill):
+              </span>
+              <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('harsh@fixnear.in');
+                    setPassword('password123');
+                  }}
+                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-center font-bold transition"
+                >
+                  👑 Admin (Harsh)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('priya@fixnear.in');
+                    setPassword('password123');
+                  }}
+                  className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-center font-bold transition"
+                >
+                  👤 Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('alex@apexpower.in');
+                    setPassword('password123');
+                  }}
+                  className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-center font-bold transition"
+                >
+                  ⚡ Technician
+                </button>
+              </div>
+            </div>
           </form>
         ) : (
           /* Register Form with Strict Regex & OTP Verification */
