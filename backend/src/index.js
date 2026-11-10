@@ -47,6 +47,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`FixNear Modularized Backend Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`FixNear Modularized Backend Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

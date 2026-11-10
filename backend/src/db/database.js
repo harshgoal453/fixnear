@@ -1,7 +1,27 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, '../../fixnear.db');
+const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+let dbPath;
+
+if (isVercel) {
+  // On Vercel Serverless Functions, /tmp is the only writable directory
+  const tmpDir = '/tmp';
+  dbPath = path.join(tmpDir, 'fixnear.db');
+
+  const bundledDb = path.join(__dirname, '../../fixnear.db');
+  if (!fs.existsSync(dbPath) && fs.existsSync(bundledDb)) {
+    try {
+      fs.copyFileSync(bundledDb, dbPath);
+    } catch (e) {
+      console.warn('Could not copy bundled database to /tmp:', e.message);
+    }
+  }
+} else {
+  dbPath = path.join(__dirname, '../../fixnear.db');
+}
+
 const db = new Database(dbPath);
 
 // Enable foreign keys
@@ -48,7 +68,7 @@ function initDb() {
       availability_status TEXT CHECK(availability_status IN ('available', 'busy', 'offline')) DEFAULT 'available',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+      FOREIGN KEY (category_id) REFERENCES categories(id)
     );
 
     CREATE TABLE IF NOT EXISTS bookings (
@@ -56,28 +76,27 @@ function initDb() {
       customer_id INTEGER NOT NULL,
       technician_id INTEGER NOT NULL,
       service_category_id INTEGER NOT NULL,
-      booking_date TEXT NOT NULL,
+      booking_date DATE NOT NULL,
       time_slot TEXT NOT NULL,
-      address TEXT NOT NULL,
-      notes TEXT,
       status TEXT CHECK(status IN ('requested', 'accepted', 'in_progress', 'completed', 'cancelled')) DEFAULT 'requested',
-      total_price REAL NOT NULL,
-      payment_status TEXT CHECK(payment_status IN ('pending', 'paid')) DEFAULT 'pending',
+      payment_status TEXT CHECK(payment_status IN ('pending', 'paid', 'refunded')) DEFAULT 'pending',
       payment_id TEXT,
       payment_method TEXT DEFAULT 'UPI',
-      completion_notes TEXT,
+      total_price REAL NOT NULL,
+      address TEXT NOT NULL,
+      notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (technician_id) REFERENCES technicians(id) ON DELETE CASCADE,
-      FOREIGN KEY (service_category_id) REFERENCES categories(id) ON DELETE CASCADE
+      FOREIGN KEY (service_category_id) REFERENCES categories(id)
     );
 
     CREATE TABLE IF NOT EXISTS reviews (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      booking_id INTEGER UNIQUE NOT NULL,
+      booking_id INTEGER NOT NULL UNIQUE,
       customer_id INTEGER NOT NULL,
       technician_id INTEGER NOT NULL,
-      rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+      rating INTEGER CHECK(rating >= 1 AND rating <= 5) NOT NULL,
       comment TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
@@ -115,6 +134,19 @@ function initDb() {
     }
   } catch (err) {
     console.error('Migration warning:', err.message);
+  }
+
+  // Auto-seed if newly created database has 0 users
+  try {
+    const userCount = db.prepare("SELECT count(*) as count FROM users").get();
+    if (!userCount || userCount.count === 0) {
+      const seedDatabase = require('./seed');
+      if (typeof seedDatabase === 'function') {
+        seedDatabase();
+      }
+    }
+  } catch (err) {
+    console.warn('Auto-seed check note:', err.message);
   }
 
   console.log('Database initialized successfully.');
