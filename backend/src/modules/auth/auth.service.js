@@ -42,24 +42,57 @@ class AuthService {
     return { user: safeUser, token };
   }
 
-  async register({ name, email, password, phone, role, business_name, category_id, city, hourly_rate }) {
+  async register({ name, email, password, phone, role, business_name, category_id, city, hourly_rate, verification_doc }) {
     if (!name || !email || !password) {
       throw new Error('Name, email, and password are required');
     }
 
-    const existing = authRepository.findByEmail(email);
+    const nameRegex = /^[a-zA-Z\s.]{3,50}$/;
+    if (!nameRegex.test(name.trim())) {
+      throw new Error('Invalid Name: Must be 3 to 50 alphabetic characters only.');
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      throw new Error('Invalid Email Address: Please enter a verified email (e.g. user@domain.com).');
+    }
+
+    if (phone) {
+      const phoneRegex = /^(?:\+91[\-\s]?)?[6-9]\d{9}$/;
+      if (!phoneRegex.test(phone.trim())) {
+        throw new Error('Invalid Mobile Number: Must be a valid 10-digit Indian phone number.');
+      }
+    }
+
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,30}$/;
+    if (!passwordRegex.test(password)) {
+      throw new Error('Invalid Password: Must be at least 6 characters and contain at least one letter and one number.');
+    }
+
+    const existing = authRepository.findByEmail(email.trim().toLowerCase());
     if (existing) {
       throw new Error('An account with this email already exists');
     }
 
+    const isProvider = role === 'provider' || role === 'technician';
+    const assignedRole = isProvider ? 'provider' : 'customer';
+
+    if (assignedRole === 'provider') {
+      if (business_name && !/^[a-zA-Z0-9\s.,&'-]{3,60}$/.test(business_name.trim())) {
+        throw new Error('Invalid Business Name: Must be 3 to 60 characters.');
+      }
+      if (!verification_doc || !verification_doc.trim()) {
+        throw new Error('Verification Document Required: Technicians must provide trade license or certification document on file.');
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const assignedRole = role === 'provider' ? 'provider' : 'customer';
 
     const newUser = authRepository.createUser({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password: hashedPassword,
-      phone: phone || '+91 98200 00000',
+      phone: phone ? phone.trim() : '+91 98200 00000',
       role: assignedRole,
       avatar: assignedRole === 'provider'
         ? 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=150'
@@ -69,10 +102,11 @@ class AuthService {
     if (assignedRole === 'provider') {
       authRepository.createTechnician({
         user_id: newUser.id,
-        business_name: business_name || `${name}'s Services`,
+        business_name: business_name ? business_name.trim() : `${name.trim()}'s Services`,
         category_id: category_id || 1,
         city: city || 'Mumbai, MH, India',
-        hourly_rate: hourly_rate || 499.00
+        hourly_rate: hourly_rate || 499.00,
+        verification_doc: verification_doc ? verification_doc.trim() : 'DOC_PENDING_SUBMISSION.pdf'
       });
     }
 

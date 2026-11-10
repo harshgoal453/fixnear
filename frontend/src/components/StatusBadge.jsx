@@ -5,51 +5,51 @@ export default function StatusBadge({ status }) {
   const configs = {
     requested: {
       label: 'Requested',
-      bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      bg: 'bg-blue-50 text-blue-700 border-blue-200',
       icon: Clock
     },
     accepted: {
       label: 'Accepted',
-      bg: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+      bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
       icon: CheckCircle2
     },
     in_progress: {
       label: 'In Progress',
-      bg: 'bg-amber-500/15 text-amber-300 border-amber-500/30 animate-pulse',
+      bg: 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse',
       icon: PlayCircle
     },
     completed: {
       label: 'Completed',
-      bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      bg: 'bg-emerald-50 text-emerald-800 border-emerald-300',
       icon: CheckCheck
     },
     cancelled: {
       label: 'Cancelled',
-      bg: 'bg-slate-800 text-slate-400 border-slate-700',
+      bg: 'bg-slate-100 text-slate-600 border-slate-200',
       icon: XCircle
     },
     open: {
       label: 'Open Complaint',
-      bg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+      bg: 'bg-rose-50 text-rose-700 border-rose-200',
       icon: XCircle
     },
     resolved: {
       label: 'Resolved Dispute',
-      bg: 'bg-teal-500/15 text-teal-400 border-teal-500/30',
+      bg: 'bg-teal-50 text-teal-800 border-teal-200',
       icon: CheckCheck
     }
   };
 
   const config = configs[status] || {
     label: status,
-    bg: 'bg-slate-800 text-slate-300 border-slate-700',
+    bg: 'bg-slate-100 text-slate-700 border-slate-200',
     icon: Clock
   };
 
   const IconComponent = config.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border backdrop-blur-md ${config.bg}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border shadow-2xs ${config.bg}`}>
       <IconComponent className="w-3.5 h-3.5 shrink-0" />
       <span>{config.label}</span>
     </span>

@@ -47,10 +47,10 @@ class AuthRepository {
     return this.findById(result.lastInsertRowid);
   }
 
-  createTechnician({ user_id, business_name, category_id, bio, hourly_rate, city, address, skills }) {
+  createTechnician({ user_id, business_name, category_id, bio, hourly_rate, city, address, skills, verification_doc }) {
     db.prepare(`
-      INSERT INTO technicians (user_id, business_name, category_id, bio, hourly_rate, city, address, skills, verified, availability_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'available')
+      INSERT INTO technicians (user_id, business_name, category_id, bio, hourly_rate, city, address, skills, verified, verification_doc, availability_status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'available')
     `).run(
       user_id,
       business_name,
@@ -59,7 +59,8 @@ class AuthRepository {
       hourly_rate || 499.00,
       city || 'Mumbai, MH, India',
       address || '',
-      JSON.stringify(skills || ['General Professional Service'])
+      JSON.stringify(skills || ['General Professional Service']),
+      verification_doc || null
     );
     return this.findById(user_id);
   }
