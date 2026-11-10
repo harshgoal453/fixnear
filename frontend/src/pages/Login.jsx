@@ -454,7 +454,7 @@ export default function Login() {
               disabled={submitting}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md shadow-indigo-600/25 transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
-              <span>{submitting ? 'Verifying & Registering...' : 'Create Verified Account'}</span>
+              <span>{submitting ? 'Creating Account...' : 'Create Account'}</span>
               <UserPlus className="w-4 h-4" />
             </button>
           </form>
