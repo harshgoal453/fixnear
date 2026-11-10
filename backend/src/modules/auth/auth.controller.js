@@ -10,6 +10,26 @@ class AuthController {
     }
   }
 
+  async sendOtp(req, res) {
+    try {
+      const { type, target } = req.body;
+      const result = await authService.sendOtp(type, target);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
+
+  async verifyOtp(req, res) {
+    try {
+      const { type, target, otp } = req.body;
+      const result = await authService.verifyOtp(type, target, otp);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
+
   async login(req, res) {
     try {
       const { email, password } = req.body;

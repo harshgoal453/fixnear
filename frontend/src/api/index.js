@@ -43,6 +43,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(userData)
     }),
+    sendOtp: (type, target) => request('/api/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ type, target })
+    }),
+    verifyOtp: (type, target, otp) => request('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ type, target, otp })
+    }),
     getMe: () => request('/api/auth/me')
   },
 

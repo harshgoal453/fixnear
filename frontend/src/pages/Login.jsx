@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { Wrench, Shield, User, Lock, Mail, ArrowRight, UserPlus, Phone, Briefcase, FileText, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
+import { api } from '../api';
+import { Wrench, Shield, User, Lock, Mail, ArrowRight, UserPlus, Phone, Briefcase, FileText, Upload, CheckCircle2, AlertCircle, KeyRound, RefreshCw } from 'lucide-react';
 
 export default function Login() {
   const { loginByEmail, register } = useAuthStore();
@@ -24,6 +25,22 @@ export default function Login() {
   const [verificationDoc, setVerificationDoc] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
 
+  // Email OTP Verification State
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
+  const [emailOtpDemo, setEmailOtpDemo] = useState('');
+
+  // Phone OTP Verification State
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
+  const [verifyingPhoneOtp, setVerifyingPhoneOtp] = useState(false);
+  const [phoneOtpDemo, setPhoneOtpDemo] = useState('');
+
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,6 +52,80 @@ export default function Login() {
     password: /^(?=.*[A-Za-z])(?=.*\d).{6,30}$/,
     businessName: /^[a-zA-Z0-9\s.,&'-]{3,60}$/,
     docLicense: /^[A-Za-z0-9\-_./]{5,40}$/
+  };
+
+  // Send Email OTP
+  const handleSendEmailOtp = async () => {
+    if (!REGEX.email.test(email.trim())) {
+      setError('Please enter a valid email address (e.g. user@domain.com) to receive OTP.');
+      return;
+    }
+    setError(null);
+    setSendingEmailOtp(true);
+    try {
+      const res = await api.auth.sendOtp('email', email.trim());
+      setEmailOtpSent(true);
+      setEmailOtpDemo(res.otp || '123456');
+    } catch (err) {
+      setError(err.message || 'Failed to dispatch Email OTP.');
+    } finally {
+      setSendingEmailOtp(false);
+    }
+  };
+
+  // Verify Email OTP
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp.trim()) {
+      setError('Please enter the 6-digit OTP code sent to your email.');
+      return;
+    }
+    setError(null);
+    setVerifyingEmailOtp(true);
+    try {
+      await api.auth.verifyOtp('email', email.trim(), emailOtp.trim());
+      setEmailVerified(true);
+    } catch (err) {
+      setError(err.message || 'Invalid or expired Email OTP.');
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
+  // Send Phone OTP
+  const handleSendPhoneOtp = async () => {
+    if (!REGEX.phone.test(phone.trim())) {
+      setError('Please enter a valid 10-digit mobile number (0 to 9) to receive OTP.');
+      return;
+    }
+    setError(null);
+    setSendingPhoneOtp(true);
+    try {
+      const res = await api.auth.sendOtp('phone', phone.trim());
+      setPhoneOtpSent(true);
+      setPhoneOtpDemo(res.otp || '123456');
+    } catch (err) {
+      setError(err.message || 'Failed to dispatch Mobile OTP.');
+    } finally {
+      setSendingPhoneOtp(false);
+    }
+  };
+
+  // Verify Phone OTP
+  const handleVerifyPhoneOtp = async () => {
+    if (!phoneOtp.trim()) {
+      setError('Please enter the 6-digit OTP code sent to your mobile.');
+      return;
+    }
+    setError(null);
+    setVerifyingPhoneOtp(true);
+    try {
+      await api.auth.verifyOtp('phone', phone.trim(), phoneOtp.trim());
+      setPhoneVerified(true);
+    } catch (err) {
+      setError(err.message || 'Invalid or expired Mobile OTP.');
+    } finally {
+      setVerifyingPhoneOtp(false);
+    }
   };
 
   const handleLoginSubmit = async (e) => {
@@ -86,8 +177,20 @@ export default function Login() {
       return;
     }
 
+    if (!emailVerified) {
+      setError('Email OTP Verification Required: Please verify your email address using the Send OTP button.');
+      setSubmitting(false);
+      return;
+    }
+
     if (!REGEX.phone.test(phone.trim())) {
-      setError('Invalid Mobile Number: Must be a verified 10-digit Indian phone number (+91 9XXXXXXXXX).');
+      setError('Invalid Mobile Number: Must be a verified 10-digit mobile number (+91 9XXXXXXXXX).');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!phoneVerified) {
+      setError('Mobile OTP Verification Required: Please verify your mobile phone number using the Send OTP button.');
       setSubmitting(false);
       return;
     }
@@ -121,7 +224,9 @@ export default function Login() {
       category_id: role === 'provider' ? Number(selectedCategory) : undefined,
       city: role === 'provider' ? city : undefined,
       hourly_rate: role === 'provider' ? Number(hourlyRate) : undefined,
-      verification_doc: role === 'provider' ? verificationDoc.trim() : undefined
+      verification_doc: role === 'provider' ? verificationDoc.trim() : undefined,
+      email_verified: emailVerified,
+      phone_verified: phoneVerified
     });
 
     if (res?.success) {
@@ -158,7 +263,9 @@ export default function Login() {
             type="button"
             onClick={() => { setMode('login'); setError(null); }}
             className={`py-2.5 rounded-xl transition ${
-              mode === 'login' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              mode === 'login'
+                ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Sign In
@@ -167,34 +274,30 @@ export default function Login() {
             type="button"
             onClick={() => { setMode('register'); setError(null); }}
             className={`py-2.5 rounded-xl transition ${
-              mode === 'register' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              mode === 'register'
+                ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Create Account
           </button>
         </div>
 
+        {/* Global Error Banner */}
         {error && (
-          <div className="bg-rose-50 text-rose-700 p-3.5 rounded-2xl border border-rose-200 text-xs flex items-start gap-2 shadow-xs">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
-            <span>{error}</span>
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-2xl text-xs flex items-start gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+            <span className="font-medium leading-relaxed">{error}</span>
           </div>
         )}
 
         {mode === 'login' ? (
-          /* Login Form - Manual Email and Password Entry */
+          /* Manual Login Form */
           <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Email Address</span>
-                </span>
-                {email && REGEX.email.test(email) && (
-                  <span className="text-emerald-600 text-[11px] font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Valid Email
-                  </span>
-                )}
+              <label className="block font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Email Address</span>
               </label>
               <input
                 type="email"
@@ -231,7 +334,7 @@ export default function Login() {
             </button>
           </form>
         ) : (
-          /* Register Form with Strict Regex & Technician Document Upload */
+          /* Register Form with Strict Regex & OTP Verification */
           <form onSubmit={handleRegisterSubmit} className="space-y-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 mb-1.5">Account Role</label>
@@ -286,50 +389,180 @@ export default function Login() {
               />
             </div>
 
-            {/* Email with Regex Validation */}
+            {/* Email with Regex & OTP Verification */}
             <div>
               <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Email Address</span>
                 </span>
-                {email && (
-                  <span className={`text-[10px] font-bold ${REGEX.email.test(email) ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {REGEX.email.test(email) ? '✓ Verified Format' : 'Invalid email syntax'}
+                {emailVerified ? (
+                  <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Email Verified
                   </span>
+                ) : (
+                  email && (
+                    <span className={`text-[10px] font-bold ${REGEX.email.test(email) ? 'text-indigo-600' : 'text-amber-600'}`}>
+                      {REGEX.email.test(email) ? 'OTP Verification Required' : 'Invalid email syntax'}
+                    </span>
+                  )
                 )}
               </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. vikram@example.in"
-                required
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
-              />
+              
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  disabled={emailVerified}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailOtpSent(false);
+                    setEmailVerified(false);
+                  }}
+                  placeholder="e.g. vikram@example.in"
+                  required
+                  className={`flex-1 bg-slate-50 border ${
+                    emailVerified ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-300'
+                  } rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition`}
+                />
+                {!emailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={!REGEX.email.test(email) || sendingEmailOtp}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap shadow-xs"
+                  >
+                    {sendingEmailOtp ? 'Sending...' : emailOtpSent ? 'Resend' : 'Send OTP'}
+                  </button>
+                )}
+              </div>
+
+              {/* Email OTP Drawer */}
+              {emailOtpSent && !emailVerified && (
+                <div className="mt-2.5 p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-indigo-900 flex items-center gap-1">
+                      <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Enter 6-Digit Email OTP:</span>
+                    </span>
+                    {emailOtpDemo && (
+                      <button
+                        type="button"
+                        onClick={() => setEmailOtp(emailOtpDemo)}
+                        className="text-indigo-700 hover:text-indigo-900 font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-indigo-200 transition"
+                      >
+                        Code: <strong>{emailOtpDemo}</strong> (Click to fill)
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={emailOtp}
+                      onChange={(e) => setEmailOtp(e.target.value)}
+                      placeholder="e.g. 123456"
+                      className="flex-1 bg-white border border-indigo-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono tracking-widest text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyEmailOtp}
+                      disabled={verifyingEmailOtp || !emailOtp}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {verifyingEmailOtp ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Mobile with Phone Regex Validation */}
+            {/* Mobile with Phone Regex & OTP Verification */}
             <div>
               <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Mobile Number</span>
                 </span>
-                {phone && phone !== '+91 ' && (
-                  <span className={`text-[10px] font-bold ${REGEX.phone.test(phone) ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {REGEX.phone.test(phone) ? '✓ Valid 10-Digit Mobile' : '10 digits (0 to 9)'}
+                {phoneVerified ? (
+                  <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Mobile Verified
                   </span>
+                ) : (
+                  phone && phone !== '+91 ' && (
+                    <span className={`text-[10px] font-bold ${REGEX.phone.test(phone) ? 'text-indigo-600' : 'text-amber-600'}`}>
+                      {REGEX.phone.test(phone) ? 'OTP Verification Required' : '10 digits (0 to 9)'}
+                    </span>
+                  )
                 )}
               </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98200 12345"
-                required
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
-              />
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={phone}
+                  disabled={phoneVerified}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setPhoneOtpSent(false);
+                    setPhoneVerified(false);
+                  }}
+                  placeholder="+91 98200 12345"
+                  required
+                  className={`flex-1 bg-slate-50 border ${
+                    phoneVerified ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-300'
+                  } rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition`}
+                />
+                {!phoneVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendPhoneOtp}
+                    disabled={!REGEX.phone.test(phone) || sendingPhoneOtp}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap shadow-xs"
+                  >
+                    {sendingPhoneOtp ? 'Sending...' : phoneOtpSent ? 'Resend' : 'Send OTP'}
+                  </button>
+                )}
+              </div>
+
+              {/* Phone OTP Drawer */}
+              {phoneOtpSent && !phoneVerified && (
+                <div className="mt-2.5 p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-indigo-900 flex items-center gap-1">
+                      <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Enter 6-Digit Mobile OTP:</span>
+                    </span>
+                    {phoneOtpDemo && (
+                      <button
+                        type="button"
+                        onClick={() => setPhoneOtp(phoneOtpDemo)}
+                        className="text-indigo-700 hover:text-indigo-900 font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-indigo-200 transition"
+                      >
+                        Code: <strong>{phoneOtpDemo}</strong> (Click to fill)
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={phoneOtp}
+                      onChange={(e) => setPhoneOtp(e.target.value)}
+                      placeholder="e.g. 123456"
+                      className="flex-1 bg-white border border-indigo-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-mono tracking-widest text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyPhoneOtp}
+                      disabled={verifyingPhoneOtp || !phoneOtp}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {verifyingPhoneOtp ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Password with Strength Regex */}
@@ -358,24 +591,31 @@ export default function Login() {
             {/* Technician-Specific Fields & Document Upload */}
             {role === 'provider' && (
               <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-3.5">
-                <div className="font-bold text-emerald-900 text-xs flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-emerald-600" />
-                  <span>Technician Trade Licensing & Document Upload</span>
+                <div className="flex items-center gap-2 border-b border-emerald-200 pb-2">
+                  <Wrench className="w-4 h-4 text-emerald-700" />
+                  <span className="font-extrabold text-emerald-900 text-xs">Technician Trade & Licensing Verification</span>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Business / Trade Name</label>
+                  <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>Registered Business Name</span>
+                    {businessName && (
+                      <span className={`text-[10px] font-bold ${REGEX.businessName.test(businessName) ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {REGEX.businessName.test(businessName) ? '✓ Valid' : '3-60 chars'}
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="e.g. Apex Electrical Solutions"
+                    placeholder="e.g. Mehta Heavy Electricals"
                     required
                     className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Service Trade</label>
                     <select
@@ -452,7 +692,11 @@ export default function Login() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md shadow-indigo-600/25 transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className={`w-full py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm shadow-md ${
+                emailVerified && phoneVerified
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/25'
+                  : 'bg-indigo-600/90 hover:bg-indigo-700 text-white shadow-indigo-600/20'
+              } disabled:opacity-50`}
             >
               <span>{submitting ? 'Creating Account...' : 'Create Account'}</span>
               <UserPlus className="w-4 h-4" />
