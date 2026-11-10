@@ -31,7 +31,7 @@ export default function Login() {
   const REGEX = {
     name: /^[a-zA-Z\s.]{3,50}$/,
     email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-    phone: /^(?:\+91[\-\s]?)?[6-9]\d{9}$/,
+    phone: /^(?:\+91[\-\s]?)?[0-9]{10}$/,
     password: /^(?=.*[A-Za-z])(?=.*\d).{6,30}$/,
     businessName: /^[a-zA-Z0-9\s.,&'-]{3,60}$/,
     docLicense: /^[A-Za-z0-9\-_./]{5,40}$/
@@ -309,16 +309,16 @@ export default function Login() {
               />
             </div>
 
-            {/* Mobile with Indian Phone Regex Validation */}
+            {/* Mobile with Phone Regex Validation */}
             <div>
               <label className="block font-bold text-slate-700 mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Indian Mobile Number</span>
+                  <span>Mobile Number</span>
                 </span>
                 {phone && phone !== '+91 ' && (
                   <span className={`text-[10px] font-bold ${REGEX.phone.test(phone) ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {REGEX.phone.test(phone) ? '✓ Valid 10-Digit Mobile' : '10 digits starting with 6-9'}
+                    {REGEX.phone.test(phone) ? '✓ Valid 10-Digit Mobile' : '10 digits (0 to 9)'}
                   </span>
                 )}
               </label>

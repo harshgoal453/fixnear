@@ -58,9 +58,9 @@ class AuthService {
     }
 
     if (phone) {
-      const phoneRegex = /^(?:\+91[\-\s]?)?[6-9]\d{9}$/;
+      const phoneRegex = /^(?:\+91[\-\s]?)?[0-9]{10}$/;
       if (!phoneRegex.test(phone.trim())) {
-        throw new Error('Invalid Mobile Number: Must be a valid 10-digit Indian phone number.');
+        throw new Error('Invalid Mobile Number: Must be a valid 10-digit mobile number (0 to 9).');
       }
     }
 
